@@ -170,7 +170,18 @@ npm start
 
 5. **Deploy.** That's it — no local-only dependencies, no SQLite, no in-memory storage.
 
-> **Note on Prisma + serverless:** `next.config.ts` marks `@prisma/client` as an external package so the query engine is bundled correctly for Vercel's Node.js runtime, and all API routes declare `runtime = "nodejs"`.
+> **Note on Prisma + serverless:** `next.config.ts` marks Prisma and the Neon
+> packages as external so they're bundled correctly for Vercel's Node.js runtime,
+> and all API routes declare `runtime = "nodejs"`.
+>
+> **Important — Neon serverless driver adapter:** the database layer
+> ([src/lib/prisma.ts](src/lib/prisma.ts)) uses `@prisma/adapter-neon`, which
+> connects to Neon over **HTTPS/WebSocket (port 443)** instead of a raw TCP
+> connection on port 5432. A plain TCP connection from Vercel's serverless
+> functions is unreliable (IPv6-egress + cold-start timeouts) and fails with
+> `P1001: Can't reach database server`. The adapter is the supported fix and the
+> reason this app runs on Vercel without redesign. `DATABASE_URL` must be the
+> **pooled** Neon URL.
 
 ---
 

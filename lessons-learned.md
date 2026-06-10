@@ -101,6 +101,26 @@ simple, predictable shapes.
   branch may need a retry. For production traffic, enabling Neon's "always-on"/min-compute setting or
   using Prisma Accelerate removes the cold-start window entirely.
 
+- **Deployed to Vercel and every page failed with `P1001: Can't reach database server`.** The app
+  worked perfectly locally but the serverless functions could not reach Neon on port 5432. Root
+  cause: **a raw TCP connection to Postgres is unreliable from Vercel's serverless functions** —
+  they hit IPv6-egress limitations and connection cold-start timeouts that a normal long-lived
+  server doesn't. This is a well-known Prisma + Neon + serverless gotcha, and it is *not* fixed by
+  changing the connection string or env vars (the function clearly had the right `DATABASE_URL` —
+  the error printed the correct host).
+
+  **Resolution:** switch the database layer to Prisma's **Neon serverless driver adapter**
+  (`@prisma/adapter-neon` + `@neondatabase/serverless`). Instead of TCP/5432 it talks to Neon over
+  **HTTPS fetch (queries) and WebSocket (transactions) on port 443**, which serverless platforms
+  support cleanly. `src/lib/prisma.ts` now builds the client with `new PrismaNeon({ connectionString })`,
+  sets `neonConfig.webSocketConstructor = ws` (Node has no global WebSocket) and
+  `neonConfig.poolQueryViaFetch = true` (route plain queries over HTTPS for the fastest, most
+  reliable cold starts). The adapter version **must match the Prisma Client major version**
+  (`@prisma/adapter-neon@6.19` for `@prisma/client@6.19`) — npm initially pulled adapter v7 against
+  client v6, which would have broken at runtime. **Takeaway:** for any Prisma app targeting
+  Vercel/serverless with Neon, use the driver adapter from day one rather than the default TCP
+  connection.
+
 ---
 
 ## Improvements for production scaling
