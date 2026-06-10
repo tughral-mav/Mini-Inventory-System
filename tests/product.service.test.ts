@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const prismaMock = vi.hoisted(() => ({
   category: { findUnique: vi.fn() },
   product: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
+  stockMovement: { create: vi.fn() },
 }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));

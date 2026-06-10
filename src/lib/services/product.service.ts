@@ -73,28 +73,34 @@ export const productService = {
     const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
     if (!category) throw new NotFoundError("Category", data.categoryId);
 
-    return prisma.product.create({
+    // Two separate inserts instead of a nested write, so each runs as a single
+    // HTTPS query via the Neon adapter (no WebSocket transaction — reliable on
+    // Vercel serverless).
+    const product = await prisma.product.create({
       data: {
         name: data.name,
         description: data.description || null,
         price: new Prisma.Decimal(data.price),
         stock: data.stock,
         categoryId: data.categoryId,
-        // Record the opening balance in the audit trail.
-        movements:
-          data.stock > 0
-            ? {
-                create: {
-                  delta: data.stock,
-                  resulting: data.stock,
-                  type: StockMovementType.INITIAL,
-                  note: "Initial stock on product creation",
-                },
-              }
-            : undefined,
       },
       include: { category: { select: { name: true } } },
     });
+
+    // Record the opening balance in the audit trail (best-effort append).
+    if (data.stock > 0) {
+      await prisma.stockMovement.create({
+        data: {
+          productId: product.id,
+          delta: data.stock,
+          resulting: data.stock,
+          type: StockMovementType.INITIAL,
+          note: "Initial stock on product creation",
+        },
+      });
+    }
+
+    return product;
   },
 
   async update(id: string, input: ProductInput) {

@@ -30,7 +30,7 @@ A production-ready inventory management MVP built with **Next.js (App Router) + 
 
 ```
 .
-├── docs/                          # 📄 Project deliverables (kept separate from code)
+├── Lessons Learned and Prompt History/   # 📄 Project deliverables (separate from code)
 │   ├── prompt-history.md          # All prompts used during development
 │   └── lessons-learned.md         # Architecture decisions, trade-offs, full error log
 ├── tests/                         # 🧪 Test cases (Vitest unit tests, separate from src)
@@ -79,8 +79,9 @@ A production-ready inventory management MVP built with **Next.js (App Router) + 
 └── package.json
 ```
 
-> **Deliverables** — the test cases, prompt history, and lessons learned each live in their own
-> dedicated folder (`tests/`, `docs/`) to keep them cleanly separated from the application code.
+> **Deliverables** — the test cases (`tests/`) and the prompt history + lessons learned
+> (`Lessons Learned and Prompt History/`) live in dedicated folders, separate from the
+> application code.
 
 ### Architecture
 
