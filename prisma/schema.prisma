@@ -1,0 +1,75 @@
+// Prisma schema for the Mini Inventory System.
+// Database: PostgreSQL (Neon / Supabase / Vercel Postgres compatible).
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Direct (non-pooled) URL used by `prisma migrate`. Falls back to DATABASE_URL
+  // when DIRECT_URL is not set (see prisma/loadEnv handling in scripts).
+  directUrl = env("DIRECT_URL")
+}
+
+/// A product category. Each category groups many products.
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([name])
+}
+
+/// A sellable product belonging to a category.
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  // Stored in the smallest currency unit-friendly Decimal to avoid float drift.
+  price       Decimal @db.Decimal(10, 2)
+  // Current on-hand stock. A DB CHECK constraint (added in the migration)
+  // guarantees this can never go negative, independent of application code.
+  stock       Int     @default(0)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  movements StockMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexed for case-insensitive name search and category filtering.
+  @@index([name])
+  @@index([categoryId])
+}
+
+/// Audit trail of every stock change. Append-only; never updated or deleted.
+model StockMovement {
+  id        String            @id @default(cuid())
+  productId String
+  product   Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Positive for stock-in, negative for stock-out.
+  delta     Int
+  // Resulting stock level after the movement was applied.
+  resulting Int
+  type      StockMovementType
+  note      String?
+  createdAt DateTime          @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+enum StockMovementType {
+  INCREASE
+  DECREASE
+  ADJUSTMENT
+  INITIAL
+}
