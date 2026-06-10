@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["tests/**/*.test.ts"],
     globals: true,
     // Run in a single fork. The suite is small and pure (mocked Prisma), so the
     // overhead of multiple worker processes isn't worth it, and it keeps memory

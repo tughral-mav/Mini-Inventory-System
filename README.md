@@ -30,10 +30,20 @@ A production-ready inventory management MVP built with **Next.js (App Router) + 
 
 ```
 .
+├── docs/                          # 📄 Project deliverables (kept separate from code)
+│   ├── prompt-history.md          # All prompts used during development
+│   └── lessons-learned.md         # Architecture decisions, trade-offs, full error log
+├── tests/                         # 🧪 Test cases (Vitest unit tests, separate from src)
+│   ├── product.service.test.ts
+│   ├── stock.service.test.ts
+│   ├── stock-logic.test.ts
+│   └── category.service.test.ts
 ├── prisma/
 │   ├── schema.prisma              # Product, Category, StockMovement models + indexes
 │   ├── migrations/                # SQL migration incl. non-negative-stock CHECK constraint
 │   └── seed.ts                    # Idempotent seed data
+├── scripts/
+│   └── apply-migration.mjs        # Cold-start-safe migration applier (npm run db:setup)
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx
@@ -53,13 +63,12 @@ A production-ready inventory management MVP built with **Next.js (App Router) + 
 │   │   ├── Modal.tsx
 │   │   └── StatusBadge.tsx
 │   └── lib/
-│       ├── prisma.ts              # Database layer: shared Prisma client
+│       ├── prisma.ts              # Database layer: shared Prisma client (Neon adapter)
 │       ├── services/              # Business logic layer
 │       │   ├── product.service.ts
 │       │   ├── category.service.ts
 │       │   ├── stock.service.ts
-│       │   ├── stock-logic.ts     # Pure, unit-tested stock rules
-│       │   └── *.test.ts          # Vitest unit tests
+│       │   └── stock-logic.ts     # Pure, unit-tested stock rules
 │       ├── validators.ts          # Zod schemas
 │       ├── dto.ts                 # Serializable DTOs (Decimal → number)
 │       ├── errors.ts              # Domain error types
@@ -69,6 +78,9 @@ A production-ready inventory management MVP built with **Next.js (App Router) + 
 ├── vercel.json
 └── package.json
 ```
+
+> **Deliverables** — the test cases, prompt history, and lessons learned each live in their own
+> dedicated folder (`tests/`, `docs/`) to keep them cleanly separated from the application code.
 
 ### Architecture
 
