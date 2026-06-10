@@ -141,3 +141,24 @@ simple, predictable shapes.
 9. **Stock-movement UI** — expose the existing `StockMovement` audit trail as a per-product history
    view (the data is already captured).
 10. **Bulk operations & CSV import/export** for real inventory workflows.
+
+---
+
+## Appendix: Full error log (chronological)
+
+Every error hit while building, testing, and deploying this project, with root cause and fix.
+Kept as a quick reference so the same time isn't lost twice.
+
+| # | Error / symptom | Root cause | Fix |
+| - | --------------- | ---------- | --- |
+| 1 | `npm install` → `ERESOLVE ... react@undefined` and `npm error nospc There appears to be insufficient space` | System **C: drive was 100% full** (134 MB free); npm couldn't resolve/cache packages | Redirected npm cache + `TMP`/`TEMP` to the D: drive; cleared the stale 1.7 GB npm cache and temp on C: |
+| 2 | Vitest: `Cannot access 'prismaMock' before initialization` / "error when mocking a module" | `vi.mock` factory is hoisted above the file and referenced a top-level `const` mock | Built the mock with `vi.hoisted(() => ({...}))` |
+| 3 | Vitest: `FATAL ERROR: ... JavaScript heap out of memory` / `Zone Allocation failed` | Default multi-worker pool spawned too many processes under memory pressure (C: full) | Pinned `pool: "forks", singleFork: true` in `vitest.config.ts` |
+| 4 | `next build` worker crash: `exited with code 3221225477` (0xC0000005) then `Zone Allocation failed - process out of memory` | C: drive full → Windows commit limit / page file couldn't grow | Freed ~2 GB on C:; also set `experimental.cpus: 1` to lower build memory |
+| 5 | `next build` type error: `Type 'string' is not assignable to type 'number'` on `productService.create` | Service input types used the zod **output** type (coerced `number`) but actions pass form **strings** | Defined explicit input types where numeric fields accept `number \| string` (zod coerces on `parse`) |
+| 6 | `prisma migrate dev` → `P1001: Can't reach database server ...:5432` | **Neon free-tier auto-suspend**: first cold connection times out while compute wakes; migrate has no retry. (Red herrings ruled out: DNS/IPv6, raw TCP, `channel_binding=require`) | Warm-up retry loop (`select 1` until awake) in a cold-start-safe applier `npm run db:setup`; removed `channel_binding=require` |
+| 7 | Prisma Client returned an **empty** error once, then succeeded on retry | Same Neon cold-start intermittency | Warm-up loop before real work (added to seed too) |
+| 8 | API returned **HTTP 500** for an over-decrement instead of a 4xx | `InsufficientStockError` wasn't mapped in `toHttpStatus` and fell through to 500 | Mapped `InsufficientStockError` → **409**, generic `DomainError` → **400** |
+| 9 | `npm install @prisma/adapter-neon` pulled **v7** while `@prisma/client` is **v6.19** | Driver adapter major version must match the client major version | Pinned `@prisma/adapter-neon@6.19.3` |
+| 10 | **On Vercel**, every request → `P1001: Can't reach database server ...:5432` | Raw **TCP/5432** connection is unreliable from Vercel serverless (IPv6 egress + cold-start timeouts) | Switched `src/lib/prisma.ts` to the **Neon serverless driver adapter** (HTTPS/WebSocket on 443) |
+| 11 | After applying the adapter fix, Vercel **still** showed `...:5432` with the identical error `digest` | The adapter fix was committed **locally only** — not pushed, so Vercel kept serving the **old build** (the tell: a real adapter error would reference port 443, never 5432) | `git push` the fix so Vercel rebuilds; confirm the new deployment is live |
