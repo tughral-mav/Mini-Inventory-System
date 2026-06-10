@@ -26,6 +26,12 @@ _SERVERLESS = os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NA
 _DEFAULT_URL = "sqlite:////tmp/inventory.db" if _SERVERLESS else "sqlite:///./inventory.db"
 DATABASE_URL = os.environ.get("INVENTORY_DATABASE_URL", _DEFAULT_URL)
 
+# Common gotcha: Neon/Heroku/Supabase hand out URLs starting with "postgres://",
+# but SQLAlchemy 2.0 only accepts the "postgresql://" scheme. Normalize it so you
+# can paste the provider's string verbatim without a cryptic dialect error.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # The Engine is SQLAlchemy's connection pool / dialect manager — created once
 # and shared for the life of the process.
 #
