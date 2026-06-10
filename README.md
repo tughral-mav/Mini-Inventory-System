@@ -35,6 +35,34 @@ Then open:
 .venv/Scripts/python.exe -m pytest -q
 ```
 
+## Deploying to Vercel
+
+This repo is Vercel-ready:
+- [`api/index.py`](api/index.py) exposes the ASGI `app` (Vercel doesn't run uvicorn — it wraps the app itself).
+- [`vercel.json`](vercel.json) rewrites every path to that function and bundles the `static/` UI.
+- On Vercel the project filesystem is **read-only except `/tmp`**, so the app automatically
+  writes its SQLite file to `/tmp` when it detects the `VERCEL` env var (see `app/database.py`).
+
+Deploy with the CLI:
+```bash
+npm i -g vercel
+vercel        # preview
+vercel --prod # production
+```
+
+> ⚠️ **Data persistence on Vercel.** `/tmp` is **ephemeral and per-instance** — the database
+> resets on every cold start and isn't shared between concurrent instances. The seeded demo
+> catalog always appears, but products you add through the UI won't survive long-term.
+> **To persist data, use a hosted database** (e.g. Vercel Postgres, Neon, Supabase) and set:
+> ```
+> INVENTORY_DATABASE_URL=postgresql://USER:PASS@HOST:5432/DBNAME
+> ```
+> in the Vercel project's Environment Variables (add `psycopg2-binary` to `requirements.txt`).
+> No code changes are needed — the app reads that variable directly.
+>
+> For a stateful app with a persistent disk and a normal long-running process, **Render**,
+> **Railway**, or **Fly.io** are a more natural fit than serverless and let SQLite persist as-is.
+
 ## API reference
 
 | Method | Path | Description |

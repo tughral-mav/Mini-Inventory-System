@@ -11,9 +11,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # The connection string. We read it from an env var so tests and future
-# deployments can point at a different database without editing code.
-# Default: a SQLite file named `inventory.db` in the working directory.
-DATABASE_URL = os.environ.get("INVENTORY_DATABASE_URL", "sqlite:///./inventory.db")
+# deployments can point at a different database without editing code
+# (e.g. set INVENTORY_DATABASE_URL to a Postgres URL in production).
+#
+# Default path selection:
+#   * On Vercel/AWS Lambda the project filesystem is READ-ONLY — only /tmp is
+#     writable. Writing the SQLite file anywhere else throws at import time and
+#     crashes the function (FUNCTION_INVOCATION_FAILED). So when we detect a
+#     serverless environment we put the DB in /tmp.
+#     NOTE: /tmp is ephemeral and per-instance — data resets on cold start and is
+#     not shared between instances. Fine for a seeded demo; use Postgres to persist.
+#   * Locally we keep ./inventory.db next to the code for easy inspection.
+_SERVERLESS = os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+_DEFAULT_URL = "sqlite:////tmp/inventory.db" if _SERVERLESS else "sqlite:///./inventory.db"
+DATABASE_URL = os.environ.get("INVENTORY_DATABASE_URL", _DEFAULT_URL)
 
 # The Engine is SQLAlchemy's connection pool / dialect manager — created once
 # and shared for the life of the process.
